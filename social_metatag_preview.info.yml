@@ -1,0 +1,11 @@
+name: 'Social Metatag Preview'
+type: module
+description: 'Metatag interface for editing Open Graph (Facebook), Twitter Cards, and search engine markup - including social sharing images'
+core_version_requirement: '^8 || ^9'
+package: 'SEO'
+dependencies:
+  - drupal:media
+  - media_library_form_element:media_library_form_element
+  - metatag:metatag
+  - metatag:metatag_open_graph
+  - metatag:metatag_twitter_cards

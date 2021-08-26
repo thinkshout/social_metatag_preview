@@ -1,0 +1,12 @@
+social_metatag_preview:
+  version: 1.x
+  css:
+    theme:
+      css/social-metatag-preview.css: { }
+  js:
+    js/social-metatag-preview.js: { }
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+    - core/jquery.ui.dialog

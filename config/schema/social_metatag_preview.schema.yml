@@ -1,0 +1,5 @@
+# Schema for social_metatag_preview.
+
+field.widget.settings.social_metatag_preview:
+  type: field.widget.settings.metatag_firehose
+  label: 'Advanced meta tags form with social preview'

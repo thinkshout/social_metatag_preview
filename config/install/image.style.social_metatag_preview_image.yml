@@ -1,0 +1,16 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - social_metatag_preview
+name: social_metatag_preview_image
+label: 'Social Metatag Preview Image (1200 x 628)'
+effects:
+  d76bfec7-3fbc-4e9d-957a-426963217eb9:
+    uuid: d76bfec7-3fbc-4e9d-957a-426963217eb9
+    id: social_metatag_preview_image_scale_and_crop
+    weight: 1
+    data:
+      width: '1200'
+      height: '628'
+      anchor: center-center

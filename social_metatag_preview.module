@@ -1,0 +1,85 @@
+<?php
+
+/**
+ * @file
+ * Contains social_metatag_preview.module.
+ */
+
+use Drupal\Core\Render\BubbleableMetadata;
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\image\Entity\ImageStyle;
+use Drupal\media\Entity\Media;
+
+/**
+ * Implements hook_help().
+ */
+function social_metatag_preview_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the social_metatag_preview module.
+    case 'help.page.social_metatag_preview':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Metatag interface for editing Open Graph (Facebook), Twitter Cards, and search engine markup - including social sharing images') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function social_metatag_preview_theme($existing, $type, $theme, $path) {
+  return [
+    'social_metatag_preview' => [
+      'variables' => ['preview_type' => 'search', 'image_src' => NULL, 'title' => NULL, 'description' => NULL, 'url' => NULL, 'host' => NULL],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_token_info().
+ */
+function social_metatag_preview_token_info() : array {
+  $info['types']['social-metatag-preview'] = [
+    'name' => t('Social Metatag Preview'),
+    'description' => t('Tokens for Social Metatag Preview.'),
+  ];
+
+  $info['tokens']['social-metatag-preview']['image-src'] = [
+    'name' => 'Image src',
+    'description' => t('Displays a social image url. Requires an image media id.'),
+    'dynamic' => TRUE,
+  ];
+
+  return $info;
+}
+
+/**
+ * Implements hook_tokens().
+ */
+function social_metatag_preview_tokens($type, $tokens, array $data, array $options, BubbleableMetadata $bubbleable_metadata) : array {
+  $replacements = [];
+
+  if ($type == 'social-metatag-preview') {
+    $image_src_tokens = \Drupal::token()->findWithPrefix($tokens, 'image-src');
+    if ($image_src_tokens) {
+      /** @var \Drupal\image\Entity\ImageStyle $image_style */
+      $image_style = ImageStyle::load('social_metatag_preview_image');
+
+      foreach ($image_src_tokens as $mid => $original) {
+        $replacement = '';
+
+        /** @var \Drupal\media\Entity\Media $media */
+        $media = Media::load($mid);
+        if (isset($media->field_media_image->entity)) {
+          $replacement = $image_style->buildUrl($media->field_media_image->entity->getFileUri());
+        }
+
+        $replacements[$original] = $replacement;
+      }
+    }
+  }
+
+  return $replacements;
+}

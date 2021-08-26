@@ -1,0 +1,18 @@
+
+<div class="social-metatag-preview social-metatag-preview-{{ preview_type }}">
+  {% if image_src and preview_type != 'search' %}
+    <div class="preview-image" style="background-image: url('{{ image_src }}');"></div>
+  {% endif %}
+  <div class="preview-content">
+    {% if preview_type == 'search' %}
+      <div class="preview-url">{{ url }}</div>
+    {% elseif preview_type == 'facebook' %}
+      <div class="preview-url">{{ host }}</div>
+    {% endif %}
+    <div class="preview-title">{{ title }}</div>
+    <div class="preview-description">{{ description }}</div>
+    {% if preview_type == 'twitter' %}
+      <div class="preview-url">{{ host }}</div>
+    {% endif %}
+  </div>
+</div>
