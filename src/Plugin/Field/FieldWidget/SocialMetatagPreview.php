@@ -134,11 +134,14 @@ class SocialMetatagPreview extends MetatagFirehose {
       ]
     ];
 
+    $media_type_storage = \Drupal::entityTypeManager()->getStorage('media_type');
+    $image_media_types = $media_type_storage->loadByProperties(['source' => 'image']);
+
     $mid_default_value = $this->imageSrcTokenToMediaId($values['image_src']);
 
     $element['social_metatag_preview']['mid'] = [
       '#type' => 'media_library',
-      '#allowed_bundles' => ['image'],
+      '#allowed_bundles' => array_keys($image_media_types),
       '#title' => t('Image'),
       '#default_value' => $mid_default_value,
       '#metatag_value' => $values['image_src'],

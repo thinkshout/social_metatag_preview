@@ -5,9 +5,12 @@
  * Contains social_metatag_preview.module.
  */
 
+use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Render\BubbleableMetadata;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\file\FileInterface;
 use Drupal\image\Entity\ImageStyle;
+use Drupal\image\Plugin\Field\FieldType\ImageItem;
 use Drupal\media\Entity\Media;
 
 /**
@@ -72,8 +75,13 @@ function social_metatag_preview_tokens($type, $tokens, array $data, array $optio
 
         /** @var \Drupal\media\Entity\Media $media */
         $media = Media::load($mid);
-        if (isset($media->field_media_image->entity)) {
-          $replacement = $image_style->buildUrl($media->field_media_image->entity->getFileUri());
+        if (isset($media->bundle->entity)) {
+          $source_field_definition = $media->getSource()->getSourceFieldDefinition($media->bundle->entity);
+          $source_field_name = $source_field_definition ? $source_field_definition->getName() : NULL;
+          $file_entity = $media->$source_field_name->entity ?? NULL;
+          if ($file_entity instanceof FileInterface) {
+            $replacement = $image_style->buildUrl($file_entity->getFileUri());
+          }
         }
 
         $replacements[$original] = $replacement;
