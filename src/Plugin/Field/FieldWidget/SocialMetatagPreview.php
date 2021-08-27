@@ -2,6 +2,7 @@
 
 namespace Drupal\social_metatag_preview\Plugin\Field\FieldWidget;
 
+use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\OpenModalDialogCommand;
 use Drupal\Core\Entity\EntityFormInterface;
@@ -62,21 +63,20 @@ class SocialMetatagPreview extends MetatagFirehose {
       }
     }
 
-    $token = \Drupal::token();
     $token_data[$entity->getEntityTypeId()] = $entity;
 
     // Generate the social preview.
     $triggering_element = $form_state->getTriggeringElement();
-    $preview_url = $token->replace($values['canonical_url'], $token_data, ['clear' => TRUE]);
+    $preview_url = $this->metatagOutput($values['canonical_url'], $token_data);
     $preview_url_parts = parse_url($preview_url);
     $preview_host = $preview_url_parts['host'] ?? '';
 
     $form_state->set('social_metatag_preview', [
       '#theme' => 'social_metatag_preview',
       '#preview_type' => $triggering_element['#preview_type'] ?? 'search',
-      '#image_src' => $token->replace($values['image_src'], $token_data, ['clear' => TRUE]),
-      '#title' => strip_tags($token->replace($values['title'], $token_data, ['clear' => TRUE])),
-      '#description' => strip_tags($token->replace($values['description'], $token_data, ['clear' => TRUE])),
+      '#image_src' => $this->metatagOutput($values['image_src'], $token_data),
+      '#title' => $this->metatagOutput($values['title'], $token_data),
+      '#description' => $this->metatagOutput($values['description'], $token_data),
       '#url' => $preview_url,
       '#host' => $preview_host,
     ]);
@@ -227,6 +227,11 @@ class SocialMetatagPreview extends MetatagFirehose {
     $values = parent::massageFormValues($values, $form, $form_state);
 
     return $values;
+  }
+
+  protected function metatagOutput($value, $token_replacements = []) {
+    $processed_value = htmlspecialchars_decode(\Drupal::token()->replace($value, $token_replacements, ['clear' => TRUE]));
+    return PlainTextOutput::renderFromHtml($processed_value);
   }
 
   protected function mediaIdToImageSrcToken($mid) {
