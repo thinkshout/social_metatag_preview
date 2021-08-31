@@ -1,18 +1,28 @@
 
 <div class="social-metatag-preview social-metatag-preview-{{ preview_type }}">
-  {% if image_src and preview_type != 'search' %}
-    <div class="preview-image" style="background-image: url('{{ image_src }}');"></div>
-  {% endif %}
-  <div class="preview-content">
-    {% if preview_type == 'search' %}
+  {% if preview_type == 'search' %}
+    <div class="preview-content">
       <div class="preview-url">{{ url }}</div>
-    {% elseif preview_type == 'facebook' %}
-      <div class="preview-url">{{ host }}</div>
+      <div class="preview-title">{{ meta.title }}</div>
+      <div class="preview-description">{{ meta.description }}</div>
+    </div>
+  {% elseif preview_type == 'facebook' %}
+    {% if meta.og_image_0 %}
+      <div class="preview-image" style="background-image: url('{{ meta.og_image_0 }}');"></div>
     {% endif %}
-    <div class="preview-title">{{ title }}</div>
-    <div class="preview-description">{{ description }}</div>
-    {% if preview_type == 'twitter' %}
+    <div class="preview-content">
       <div class="preview-url">{{ host }}</div>
+      <div class="preview-title">{{ meta.og_title }}</div>
+      <div class="preview-description">{{ meta.og_description }}</div>
+    </div>
+  {% elseif preview_type == 'twitter' %}
+    {% if meta.twitter_cards_image %}
+      <div class="preview-image" style="background-image: url('{{ meta.twitter_cards_image }}');"></div>
     {% endif %}
-  </div>
+    <div class="preview-content">
+      <div class="preview-title">{{ meta.twitter_cards_title }}</div>
+      <div class="preview-description">{{ meta.twitter_cards_description }}</div>
+      <div class="preview-url">{{ host }}</div>
+    </div>
+  {% endif %}
 </div>

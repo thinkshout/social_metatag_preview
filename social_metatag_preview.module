@@ -35,7 +35,7 @@ function social_metatag_preview_help($route_name, RouteMatchInterface $route_mat
 function social_metatag_preview_theme($existing, $type, $theme, $path) {
   return [
     'social_metatag_preview' => [
-      'variables' => ['preview_type' => 'search', 'image_src' => NULL, 'title' => NULL, 'description' => NULL, 'url' => NULL, 'host' => NULL],
+      'variables' => ['preview_type' => 'search', 'meta' => NULL, 'url' => NULL, 'host' => NULL],
     ],
   ];
 }

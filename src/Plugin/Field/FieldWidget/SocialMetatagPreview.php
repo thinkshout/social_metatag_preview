@@ -63,21 +63,30 @@ class SocialMetatagPreview extends MetatagFirehose {
       }
     }
 
-    $token_data[$entity->getEntityTypeId()] = $entity;
+    $tags = metatag_get_tags_from_route($entity);
+    $tag_values = [];
+    $canonical_url = '';
+
+    foreach ($tags["#attached"]["html_head"] as $tag) {
+      if (isset($tag[0]["#attributes"]["rel"]) && $tag[0]["#attributes"]["rel"] == 'canonical') {
+        $canonical_url = $tag[0]["#attributes"]["href"];
+      }
+      elseif (isset($tag[0]["#attributes"]["content"])) {
+        $tag_values[$tag[1]] = $tag[0]["#attributes"]["content"];
+      }
+    }
 
     // Generate the social preview.
     $triggering_element = $form_state->getTriggeringElement();
-    $preview_url = $this->metatagOutput($values['canonical_url'], $token_data);
-    $preview_url_parts = parse_url($preview_url);
-    $preview_host = $preview_url_parts['host'] ?? '';
+    $preview_type = $triggering_element['#preview_type'] ?? 'search';
+    $canonical_url_parts = parse_url($canonical_url);
+    $preview_host = $canonical_url_parts['host'] ?? '';
 
     $form_state->set('social_metatag_preview', [
       '#theme' => 'social_metatag_preview',
-      '#preview_type' => $triggering_element['#preview_type'] ?? 'search',
-      '#image_src' => $this->metatagOutput($values['image_src'], $token_data),
-      '#title' => $this->metatagOutput($values['title'], $token_data),
-      '#description' => $this->metatagOutput($values['description'], $token_data),
-      '#url' => $preview_url,
+      '#preview_type' => $preview_type,
+      '#meta' => $tag_values,
+      '#url' => $canonical_url,
       '#host' => $preview_host,
     ]);
 
