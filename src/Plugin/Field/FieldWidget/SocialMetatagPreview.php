@@ -65,13 +65,15 @@ class SocialMetatagPreview extends MetatagFirehose {
 
     $tags = metatag_get_tags_from_route($entity);
     $tag_values = [];
-    foreach ($tags['#attached']['html_head'] as $tag) {
-      if (isset($tag[0]['#attributes']['href'])) {
-        $tag_values[$tag[1]] = $tag[0]['#attributes']['href'];
-      }
-      elseif (isset($tag[0]['#attributes']['content'])) {
-        $tag_values[$tag[1]] = $tag[0]['#attributes']['content'];
-      }
+    if (isset($tags['#attached'])) {
+      foreach ($tags['#attached']['html_head'] as $tag) {
+        if (isset($tag[0]['#attributes']['href'])) {
+          $tag_values[$tag[1]] = $tag[0]['#attributes']['href'];
+        }
+        elseif (isset($tag[0]['#attributes']['content'])) {
+          $tag_values[$tag[1]] = $tag[0]['#attributes']['content'];
+        }
+      }    
     }
 
     // Generate the social preview.
