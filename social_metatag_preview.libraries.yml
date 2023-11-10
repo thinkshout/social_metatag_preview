@@ -9,4 +9,4 @@ social_metatag_preview:
     - core/jquery
     - core/drupal
     - core/drupalSettings
-    - core/jquery.ui.dialog
+    - jquery_ui_dialog/dialog
