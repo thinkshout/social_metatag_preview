@@ -51,7 +51,7 @@ class SocialMetatagPreview extends MetatagFirehose {
     // Retrieve the values for each metatag from the serialized array.
     $values = [];
     if (!empty($entity->$field_name->value)) {
-      $values = unserialize($entity->$field_name->value);
+      $values = metatag_data_decode($entity->$field_name->value);
     }
 
     // Populate fields which have not been overridden in the entity.
