@@ -5,37 +5,40 @@
  * Contains social_metatag_preview.module.
  */
 
-use Drupal\Core\Field\FieldDefinitionInterface;
+declare(strict_types=1);
+
 use Drupal\Core\Render\BubbleableMetadata;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\file\FileInterface;
-use Drupal\image\Entity\ImageStyle;
-use Drupal\image\Plugin\Field\FieldType\ImageItem;
-use Drupal\media\Entity\Media;
+use Drupal\media\MediaInterface;
 
 /**
  * Implements hook_help().
  */
-function social_metatag_preview_help($route_name, RouteMatchInterface $route_match) {
+function social_metatag_preview_help(string $route_name, RouteMatchInterface $route_match): string {
   switch ($route_name) {
-    // Main module help for the social_metatag_preview module.
     case 'help.page.social_metatag_preview':
       $output = '';
       $output .= '<h3>' . t('About') . '</h3>';
       $output .= '<p>' . t('Metatag interface for editing Open Graph (Facebook), Twitter Cards, and search engine markup - including social sharing images') . '</p>';
       return $output;
-
-    default:
   }
+
+  return '';
 }
 
 /**
  * Implements hook_theme().
  */
-function social_metatag_preview_theme($existing, $type, $theme, $path) {
+function social_metatag_preview_theme($existing, $type, $theme, $path): array {
   return [
     'social_metatag_preview' => [
-      'variables' => ['preview_type' => 'search', 'meta' => NULL, 'url' => NULL, 'host' => NULL],
+      'variables' => [
+        'preview_type' => 'search',
+        'meta' => NULL,
+        'url' => NULL,
+        'host' => NULL,
+      ],
     ],
   ];
 }
@@ -43,14 +46,14 @@ function social_metatag_preview_theme($existing, $type, $theme, $path) {
 /**
  * Implements hook_token_info().
  */
-function social_metatag_preview_token_info() : array {
+function social_metatag_preview_token_info(): array {
   $info['types']['social-metatag-preview'] = [
     'name' => t('Social Metatag Preview'),
     'description' => t('Tokens for Social Metatag Preview.'),
   ];
 
   $info['tokens']['social-metatag-preview']['image-src'] = [
-    'name' => 'Image src',
+    'name' => t('Image src'),
     'description' => t('Displays a social image url. Requires an image media id.'),
     'dynamic' => TRUE,
   ];
@@ -61,32 +64,47 @@ function social_metatag_preview_token_info() : array {
 /**
  * Implements hook_tokens().
  */
-function social_metatag_preview_tokens($type, $tokens, array $data, array $options, BubbleableMetadata $bubbleable_metadata) : array {
+function social_metatag_preview_tokens($type, $tokens, array $data, array $options, BubbleableMetadata $bubbleable_metadata): array {
   $replacements = [];
 
-  if ($type == 'social-metatag-preview') {
-    $image_src_tokens = \Drupal::token()->findWithPrefix($tokens, 'image-src');
-    if ($image_src_tokens) {
-      /** @var \Drupal\image\Entity\ImageStyle $image_style */
-      $image_style = ImageStyle::load('social_metatag_preview_image');
+  if ($type !== 'social-metatag-preview') {
+    return $replacements;
+  }
 
-      foreach ($image_src_tokens as $mid => $original) {
-        $replacement = '';
+  $token_service = \Drupal::token();
+  $image_src_tokens = $token_service->findWithPrefix($tokens, 'image-src');
+  if (!$image_src_tokens) {
+    return $replacements;
+  }
 
-        /** @var \Drupal\media\Entity\Media $media */
-        $media = Media::load($mid);
-        if (isset($media->bundle->entity)) {
-          $source_field_definition = $media->getSource()->getSourceFieldDefinition($media->bundle->entity);
-          $source_field_name = $source_field_definition ? $source_field_definition->getName() : NULL;
-          $file_entity = $media->$source_field_name->entity ?? NULL;
-          if ($file_entity instanceof FileInterface) {
-            $replacement = $image_style->buildUrl($file_entity->getFileUri());
-          }
+  $entity_type_manager = \Drupal::entityTypeManager();
+  $image_style = $entity_type_manager
+    ->getStorage('image_style')
+    ->load('social_metatag_preview_image');
+
+  if (!$image_style) {
+    return $replacements;
+  }
+
+  $media_storage = $entity_type_manager->getStorage('media');
+
+  foreach ($image_src_tokens as $mid => $original) {
+    $replacement = '';
+
+    $media = $media_storage->load($mid);
+    if ($media instanceof MediaInterface) {
+      $bundle_entity = $media->bundle->entity ?? NULL;
+      if ($bundle_entity) {
+        $source_field_definition = $media->getSource()->getSourceFieldDefinition($bundle_entity);
+        $source_field_name = $source_field_definition?->getName();
+        $file_entity = $source_field_name ? ($media->{$source_field_name}->entity ?? NULL) : NULL;
+        if ($file_entity instanceof FileInterface) {
+          $replacement = $image_style->buildUrl($file_entity->getFileUri());
         }
-
-        $replacements[$original] = $replacement;
       }
     }
+
+    $replacements[$original] = $replacement;
   }
 
   return $replacements;

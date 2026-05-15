@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\social_metatag_preview\Plugin\ImageEffect;
 
 use Drupal\Core\Image\ImageInterface;
@@ -122,8 +124,8 @@ class SocialMetatagPreviewScaleAndCropImageEffect extends ScaleAndCropImageEffec
       $dimensions = $this->adjustTargetDimensionsToPreventUpscale($dimensions['width'], $dimensions['height']);
     }
     else {
-      // We cannot accurately calculate the target dimensions if we don't already
-      // have dimensions to work from.
+      // We cannot accurately calculate the target dimensions if we don't
+      // already have dimensions to work from.
       $dimensions = [
         'width' => NULL,
         'height' => NULL,

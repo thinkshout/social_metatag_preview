@@ -11,9 +11,10 @@
         "source": "http://cgit.drupalcode.org/social_metatag_preview"
     },
     "require": {
-        "drupal/core": "^8 || ^9 || ^10",
+        "php": ">=8.3",
+        "drupal/core": "^10.3 || ^11",
         "drupal/jquery_ui_dialog": "^2.0",
-        "drupal/media_library_form_element": "^2.0",
+        "drupal/media_library_form_element": "^2.0 || ^3.0",
         "drupal/metatag": "^2.0"
     }
 }
