@@ -1,13 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\social_metatag_preview\Plugin\Field\FieldWidget;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\OpenModalDialogCommand;
 use Drupal\Core\Entity\EntityFormInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Utility\Token;
 use Drupal\metatag\Plugin\Field\FieldWidget\MetatagFirehose;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -25,10 +29,22 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class SocialMetatagPreview extends MetatagFirehose {
 
   /**
+   * The entity type manager.
+   */
+  protected EntityTypeManagerInterface $entityTypeManager;
+
+  /**
+   * The token service.
+   */
+  protected Token $tokenService;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     $instance = parent::create($container, $configuration, $plugin_id, $plugin_definition);
+    $instance->entityTypeManager = $container->get('entity_type.manager');
+    $instance->tokenService = $container->get('token');
     return $instance;
   }
 
@@ -50,8 +66,8 @@ class SocialMetatagPreview extends MetatagFirehose {
 
     // Retrieve the values for each metatag from the serialized array.
     $values = [];
-    if (!empty($entity->$field_name->value)) {
-      $values = metatag_data_decode($entity->$field_name->value);
+    if (!empty($entity->{$field_name}->value)) {
+      $values = metatag_data_decode($entity->{$field_name}->value);
     }
 
     // Populate fields which have not been overridden in the entity.
@@ -65,7 +81,7 @@ class SocialMetatagPreview extends MetatagFirehose {
 
     $tags = metatag_get_tags_from_route($entity);
     $tag_values = [];
-    if (isset($tags['#attached'])) {
+    if (isset($tags['#attached']['html_head']) && is_array($tags['#attached']['html_head'])) {
       foreach ($tags['#attached']['html_head'] as $tag) {
         if (isset($tag[0]['#attributes']['href'])) {
           $tag_values[$tag[1]] = $tag[0]['#attributes']['href'];
@@ -73,12 +89,12 @@ class SocialMetatagPreview extends MetatagFirehose {
         elseif (isset($tag[0]['#attributes']['content'])) {
           $tag_values[$tag[1]] = $tag[0]['#attributes']['content'];
         }
-      }    
+      }
     }
 
     // Generate the social preview.
     $canonical_url = $tag_values['canonical_url'] ?? '';
-    $canonical_url_parts = parse_url($canonical_url);
+    $canonical_url_parts = $canonical_url ? parse_url($canonical_url) : [];
     $preview_host = $canonical_url_parts['host'] ?? '';
 
     $form_state->set('social_metatag_preview', [
@@ -88,12 +104,9 @@ class SocialMetatagPreview extends MetatagFirehose {
       '#host' => $preview_host,
     ]);
 
-    //Dev: uncomment for quicker debugging.
-    //$element['#open'] = TRUE;
-
     $element['social_metatag_preview'] = [
       '#type' => 'details',
-      '#title' => 'Social sharing preview',
+      '#title' => $this->t('Social sharing preview'),
       '#attributes' => ['class' => ['social-metatag-preview-form']],
       '#weight' => -12,
       '#open' => TRUE,
@@ -118,7 +131,7 @@ class SocialMetatagPreview extends MetatagFirehose {
       '#ajax' => [
         'callback' => [$this, 'ajaxPreview'],
         'event' => 'click',
-      ]
+      ],
     ];
 
     $element['social_metatag_preview']['preview_buttons']['facebook'] = [
@@ -128,7 +141,7 @@ class SocialMetatagPreview extends MetatagFirehose {
       '#ajax' => [
         'callback' => [$this, 'ajaxPreview'],
         'event' => 'click',
-      ]
+      ],
     ];
 
     $element['social_metatag_preview']['preview_buttons']['twitter'] = [
@@ -138,22 +151,24 @@ class SocialMetatagPreview extends MetatagFirehose {
       '#ajax' => [
         'callback' => [$this, 'ajaxPreview'],
         'event' => 'click',
-      ]
+      ],
     ];
 
-    $media_type_storage = \Drupal::entityTypeManager()->getStorage('media_type');
-    $image_media_types = $media_type_storage->loadByProperties(['source' => 'image']);
+    $image_media_types = $this->entityTypeManager
+      ->getStorage('media_type')
+      ->loadByProperties(['source' => 'image']);
 
-    $mid_default_value = $this->imageSrcTokenToMediaId($values['image_src']);
+    $image_src_value = $values['image_src'] ?? '';
+    $mid_default_value = $this->imageSrcTokenToMediaId($image_src_value);
 
     $element['social_metatag_preview']['mid'] = [
       '#type' => 'media_library',
       '#allowed_bundles' => array_keys($image_media_types),
-      '#title' => t('Image'),
+      '#title' => $this->t('Image'),
       '#default_value' => $mid_default_value,
-      '#metatag_value' => $values['image_src'],
+      '#metatag_value' => $image_src_value,
       '#after_build' => [
-        [$this, 'mediaLibraryAfterBuild'],
+        [static::class, 'mediaLibraryAfterBuild'],
       ],
     ];
 
@@ -162,7 +177,6 @@ class SocialMetatagPreview extends MetatagFirehose {
       '#title' => $this->t('Title'),
       '#default_value' => $values['title'] ?? '',
       '#maxlength' => 1024,
-      '#description' => $this->t(''),
     ];
 
     $element['social_metatag_preview']['description'] = [
@@ -170,7 +184,6 @@ class SocialMetatagPreview extends MetatagFirehose {
       '#title' => $this->t('Description'),
       '#default_value' => $values['description'] ?? '',
       '#maxlength' => 1024,
-      '#description' => $this->t(''),
     ];
 
     return $element;
@@ -179,7 +192,7 @@ class SocialMetatagPreview extends MetatagFirehose {
   /**
    * Ajax preview callback.
    */
-  public function ajaxPreview(array &$form, FormStateInterface $form_state) {
+  public function ajaxPreview(array &$form, FormStateInterface $form_state): AjaxResponse {
     $triggering_element = $form_state->getTriggeringElement();
 
     $preview = $form_state->get('social_metatag_preview');
@@ -197,11 +210,12 @@ class SocialMetatagPreview extends MetatagFirehose {
   /**
    * After build callback for media_library element.
    */
-  public function mediaLibraryAfterBuild($element, &$form_state) {
-    if (!empty($element['empty_selection']['#value'])) {
-      $element['empty_selection']['#value'] = $this->t('@metatag_value', ['@metatag_value' => $element['#metatag_value']]);
+  public static function mediaLibraryAfterBuild(array $element, FormStateInterface $form_state): array {
+    $metatag_value = $element['#metatag_value'] ?? '';
+    if (!empty($element['empty_selection']['#value']) && $metatag_value !== '') {
+      $element['empty_selection']['#value'] = $metatag_value;
     }
-    $element['#description'] = $this->t('Override the social image by uploading or selecting an image from the media library.');
+    $element['#description'] = t('Override the social image by uploading or selecting an image from the media library.');
     return $element;
   }
 
@@ -233,29 +247,39 @@ class SocialMetatagPreview extends MetatagFirehose {
       }
     }
 
-    $values = parent::massageFormValues($values, $form, $form_state);
-
-    return $values;
+    return parent::massageFormValues($values, $form, $form_state);
   }
 
-  protected function metatagOutput($value, $token_replacements = []) {
-    $processed_value = htmlspecialchars_decode(\Drupal::token()->replace($value, $token_replacements, ['clear' => TRUE]));
+  /**
+   * Render a metatag value with token replacement.
+   */
+  protected function metatagOutput(string $value, array $token_replacements = []): string {
+    $processed_value = htmlspecialchars_decode($this->tokenService->replace($value, $token_replacements, ['clear' => TRUE]));
     return PlainTextOutput::renderFromHtml($processed_value);
   }
 
-  protected function mediaIdToImageSrcToken($mid) {
+  /**
+   * Build the social-metatag-preview image-src token from a media id.
+   */
+  protected function mediaIdToImageSrcToken(int|string|null $mid): string {
     if ($mid) {
       return "[social-metatag-preview:image-src:$mid]";
     }
-    return "";
+    return '';
   }
 
-  protected function imageSrcTokenToMediaId($image_src) {
-    $tokens = \Drupal::token()->scan($image_src);
+  /**
+   * Extract the media id from a social-metatag-preview image-src token.
+   */
+  protected function imageSrcTokenToMediaId(?string $image_src): ?int {
+    if (empty($image_src)) {
+      return NULL;
+    }
+    $tokens = $this->tokenService->scan($image_src);
     if (!empty($tokens['social-metatag-preview'])) {
-      $image_src_tokens = \Drupal::token()->findWithPrefix($tokens['social-metatag-preview'], 'image-src');
+      $image_src_tokens = $this->tokenService->findWithPrefix($tokens['social-metatag-preview'], 'image-src');
       foreach ($image_src_tokens as $mid => $original) {
-        return $mid;
+        return (int) $mid;
       }
     }
     return NULL;
